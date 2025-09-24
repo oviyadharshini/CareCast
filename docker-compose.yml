@@ -1,0 +1,44 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: carecast-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: carecast
+      MYSQL_USER: carecast
+      MYSQL_PASSWORD: carecast
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  backend:
+    build: .
+    container_name: carecast-backend
+    restart: unless-stopped
+    environment:
+      # SQL Auth DB
+      MYSQL_URL: mysql+pymysql://carecast:carecast@mysql:3306/carecast
+      # Simple admin fallback for facilities (still used for facilities PUT auth)
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin123
+      SECRET_KEY: change-this-in-prod
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    # If you want live-reload during development, uncomment the volumes below
+    # volumes:
+    #   - ./:/app
+
+volumes:
+  mysql_data:
